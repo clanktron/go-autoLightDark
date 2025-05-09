@@ -2,56 +2,75 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/nathan-osman/go-sunrise"
 )
 
-func main() {
-	// Coordinates for your location
-	latitude := 34.0522
-	longitude := -118.2437
+func estimateCoordinatesFromTimezone(tz string) (float64, float64) {
+	tzCoords := map[string][2]float64{
+		"America/Los_Angeles": {34.0522, -118.2437},
+		"America/New_York":    {40.7128, -74.0060},
+		"Europe/London":       {51.5074, -0.1278},
+		"Asia/Tokyo":          {35.6895, 139.6917},
+		"Australia/Sydney":    {-33.8688, 151.2093},
+		// Add more as needed
+	}
 
-	// Load local timezone
-	loc, err := time.LoadLocation("America/Los_Angeles")
+	if coords, ok := tzCoords[tz]; ok {
+		return coords[0], coords[1]
+	}
+
+	fmt.Println("Unknown timezone, defaulting to lat=0, lon=0.")
+	return 0.0, 0.0
+}
+
+func main() {
+	link, err := os.Readlink("/etc/localtime")
 	if err != nil {
 		panic(err)
 	}
+	zone := filepath.Join("/", link)
+	parts := strings.Split(filepath.Clean(link), string(os.PathSeparator))
+	n := len(parts)
+	if n < 2 {
+		panic("unexpected timezone path format")
+	}
+
+	ianaZone := parts[n-2] + "/" + parts[n-1]
+	location := time.Now().Location()
+	latitude, longitude := estimateCoordinatesFromTimezone(ianaZone)
+	fmt.Printf("tz %s \n", zone)
+	fmt.Printf("Estimated location: Lat %.4f, Lon %.4f\n", latitude, longitude)
 
 	for {
-		now := time.Now().In(loc)
+		now := time.Now().In(location)
 		year, month, day := now.Date()
 
 		sunriseTime, sunsetTime := sunrise.SunriseSunset(latitude, longitude, year, month, day)
-		sunriseTime = sunriseTime.In(loc)
-		sunsetTime = sunsetTime.In(loc)
 
 		fmt.Printf("[INFO] Now: %s | Sunrise: %s | Sunset: %s\n", now.Format(time.RFC1123), sunriseTime.Format(time.Kitchen), sunsetTime.Format(time.Kitchen))
 
-		// Check if next event is sunrise or sunset
-		var nextEvent string
-		// var eventTime time.Time
-
+		var timeOfDay string
 		if now.Before(sunriseTime) {
-			nextEvent = "sunrise"
+			timeOfDay = "Night"
 		} else if now.Before(sunsetTime) {
-			nextEvent = "sunset"
+			timeOfDay = "Day"
 		} else {
 			// Past both events: get sunrise/sunset for next day
 			tomorrow := now.Add(24 * time.Hour)
 			y, m, d := tomorrow.Date()
 			sunriseTime, sunsetTime = sunrise.SunriseSunset(latitude, longitude, y, m, d)
-			sunriseTime = sunriseTime.In(loc)
-			nextEvent = "sunrise"
-			// eventTime = sunriseTime
+			sunriseTime = sunriseTime.In(location)
+			timeOfDay = "Night"
 		}
 
-		fmt.Printf("[TRIGGER] Executing action for %s\n", nextEvent)
-		runAction(nextEvent)
-		// lastTriggered = nextEvent
-
-		// Sleep for 30 seconds
+		fmt.Printf("[TRIGGER] Executing action for %s\n", timeOfDay)
+		runAction(timeOfDay)
 		time.Sleep(30 * time.Second)
 	}
 }
@@ -59,11 +78,10 @@ func main() {
 func runAction(event string) {
 	var cmd *exec.Cmd
 
-	// Define actions based on event
 	switch event {
-	case "sunrise":
+	case "Night":
 		cmd = exec.Command("gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-dark")
-	case "sunset":
+	case "Day":
 		cmd = exec.Command("gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-light")
 	default:
 		fmt.Println("Unknown event")
