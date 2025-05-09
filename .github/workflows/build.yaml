@@ -22,7 +22,7 @@ jobs:
 
       - name: Build Release Assets
         run: |
-          release.sh
+          sh release.sh
 
       - name: Create GitHub Release
         env:
