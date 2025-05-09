@@ -1,6 +1,6 @@
 # autoLightDark
 
-Daemon that auto sets system-wide light-dark mode based on time of day.
+Daemon that auto sets system-wide light-dark mode on gtk systems based on time of day.
 
 ---
 
@@ -12,8 +12,7 @@ Daemon that auto sets system-wide light-dark mode based on time of day.
 go build
 ```
 
-* detects timezone via `/etc/localtime`
 * estimates latitude/longitude based on timezone
 * uses `go-sunrise` to calculate sunrise and sunset
-* periodically recalculates
-* Uses `gsettings` to toggle GNOME color-scheme
+* recalculates every 30s
+* Uses `gsettings` to toggle gtk color-scheme
