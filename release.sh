@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Set the target operating systems and architectures
 os_archs=("linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64")
 
