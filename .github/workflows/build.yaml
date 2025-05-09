@@ -1,0 +1,33 @@
+name: Release
+on:
+  push:
+    tags:
+    - "*"
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          clean: true
+
+      - name: Build Release Assets
+        run: |
+          release.sh
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" ./autoLightDark* \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Automated release from GitHub Actions"
