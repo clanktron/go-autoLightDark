@@ -1,4 +1,4 @@
-module github.com/clanktron/autoLightDark
+module github.com/clanktron/go-autoLightDark
 
 go 1.24.2
 
