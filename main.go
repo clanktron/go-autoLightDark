@@ -42,33 +42,24 @@ func main() {
 	}
 
 	ianaZone := parts[n-2] + "/" + parts[n-1]
-	location := time.Now().Location()
 	latitude, longitude := estimateCoordinatesFromTimezone(ianaZone)
 	fmt.Printf("tz %s \n", zone)
 	fmt.Printf("Estimated location: Lat %.4f, Lon %.4f\n", latitude, longitude)
 
 	for {
-		now := time.Now().In(location)
+		now := time.Now().UTC()
 		year, month, day := now.Date()
 
 		sunriseTime, sunsetTime := sunrise.SunriseSunset(latitude, longitude, year, month, day)
 
-		fmt.Printf("[INFO] Now: %s | Sunrise: %s | Sunset: %s\n", now.Format(time.RFC1123), sunriseTime.Format(time.Kitchen), sunsetTime.Format(time.Kitchen))
+		fmt.Printf("[INFO] Now: %s | Sunrise: %s | Sunset: %s\n", now.In(time.Local).Format(time.RFC1123), sunriseTime.In(time.Local).Format(time.Kitchen), sunsetTime.In(time.Local).Format(time.Kitchen))
 
 		var timeOfDay string
-		if now.Before(sunriseTime) {
+		if now.Before(sunriseTime) || now.After(sunsetTime) {
 			timeOfDay = "Night"
-		} else if now.Before(sunsetTime) {
-			timeOfDay = "Day"
 		} else {
-			// Past both events: get sunrise/sunset for next day
-			tomorrow := now.Add(24 * time.Hour)
-			y, m, d := tomorrow.Date()
-			sunriseTime, sunsetTime = sunrise.SunriseSunset(latitude, longitude, y, m, d)
-			sunriseTime = sunriseTime.In(location)
-			timeOfDay = "Night"
+			timeOfDay = "Day"
 		}
-
 		fmt.Printf("[TRIGGER] Executing action for %s\n", timeOfDay)
 		runAction(timeOfDay)
 		time.Sleep(30 * time.Second)
